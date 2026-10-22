@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>compress-kit — self-test</title>
+<style>
+  :root{--bg:#0f1115;--card:#171a21;--ink:#e7e9ee;--mut:#9aa3b2;--line:#252a34}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  header,main,footer{max-width:760px;margin:0 auto;padding:20px}
+  pre{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;white-space:pre-wrap}
+  .mut{color:var(--mut)}
+</style>
+</head>
+<body>
+<header>
+  <h1>compress-kit — self-test</h1>
+  <p class="mut">Round-trips and a compression ratio, in your browser.</p>
+</header>
+<main><pre id="out">Running…</pre></main>
+<footer class="mut">© 2026 Dr Sohil Momin</footer>
+<script src="../compress-kit.js"></script>
+<script>
+  var out=[], pass=0, fail=0;
+  function eq(a,b){ if(a.length!==b.length) return false; for(var i=0;i<a.length;i++) if(a[i]!==b[i]) return false; return true; }
+  function rep(n){ var a=new Uint8Array(n); for(var i=0;i<n;i++) a[i]=(i%7===0)?65:32; return a; }
+  function rnd(n){ var a=new Uint8Array(n); for(var i=0;i<n;i++) a[i]=(i*2654435761)%256; return a; }
+  async function ok(name, fn){ try{ await fn(); pass++; out.push("PASS  "+name); }catch(e){ fail++; out.push("FAIL  "+name+"  — "+e.message); } }
+  (async function(){
+    if (!Compress.available()) { document.getElementById("out").textContent = "Compression Streams not available in this browser."; return; }
+    await ok("gzip round-trip", async function(){ var d=rnd(5000); if(!eq(d, await Compress.gunzip(await Compress.gzip(d)))) throw new Error("mismatch"); });
+    await ok("deflate-raw round-trip", async function(){ var d=rnd(5000); if(!eq(d, await Compress.inflateRaw(await Compress.deflateRaw(d)))) throw new Error("mismatch"); });
+    await ok("string round-trip", async function(){ var s="hello · नमस्ते · "+"x".repeat(300); if(await Compress.decompressString(await Compress.compressString(s))!==s) throw new Error("mismatch"); });
+    await ok("repetitive data compresses well", async function(){ var d=rep(50000), gz=await Compress.gzip(d); if(!(gz.length < d.length/10)) throw new Error("ratio "+(gz.length/d.length).toFixed(3)); out.push("      ratio "+(gz.length/d.length*100).toFixed(1)+"% of original"); });
+    document.getElementById("out").textContent = out.join("\n") + "\n\n" + pass + " passed, " + fail + " failed";
+  })();
+</script>
+</body>
+</html>
