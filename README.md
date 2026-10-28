@@ -2,7 +2,7 @@
 
 [![live](https://img.shields.io/badge/live-online-22c55e)](https://drsamonline.github.io/compress-kit/)
 [![test](https://github.com/drsamonline/compress-kit/actions/workflows/test.yml/badge.svg)](https://github.com/drsamonline/compress-kit/actions/workflows/test.yml)
-[![license](https://img.shields.io/badge/license-PolyForm Noncommercial-blue)](LICENSE)
+[![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue)](LICENSE)
 
 **The shared compression core for drsamonline apps.** One file, no dependencies,
 built on the platform's **Compression Streams**.
