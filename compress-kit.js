@@ -7,7 +7,7 @@
  *   const gz  = await Compress.gzip(bytes);
  *   const raw = await Compress.gunzip(gz);
  *
- * MIT License. (c) 2026 Dr Sohil Momin.
+ * PolyForm Noncommercial 1.0.0. (c) 2026 Dr Sohil Momin.
  */
 (function (root) {
   "use strict";
