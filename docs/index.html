@@ -1,421 +1,278 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="color-scheme" content="dark">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>compress-kit — the shared compression core</title>
+<meta name="description" content="gzip, deflate and deflate-raw through the platform's own Compression Streams. One file, no dependencies, MIT.">
+<meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f7f6f2" media="(prefers-color-scheme: light)">
+<meta property="og:title" content="compress-kit — the shared compression core">
+<meta property="og:description" content="The same bytes, smaller. One file, no dependencies.">
 <style>
-  :root{--bg:#0f1115;--card:#171a21;--ink:#e7e9ee;--mut:#9aa3b2;--line:#252a34;--acc:#22c55e}
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-  header,main,footer{max-width:760px;margin:0 auto;padding:24px 20px}
-  h1{margin:0 0 6px;font-size:24px}
-  .mut{color:var(--mut)}
-  .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));margin:18px 0}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
-  .card h3{margin:0 0 4px;font-size:14px}
-  .card p{margin:0;color:var(--mut);font-size:13px}
-  .btn{display:inline-block;background:var(--acc);color:#06210f;text-decoration:none;font-weight:600;border-radius:10px;padding:10px 14px;margin:4px 4px 0 0}
+  /* The subject is size, so the page is built out of it: a long run of blocks
+     collapsing into a short one, and type that is set to a single column. */
+  :root {
+    --bg: #0f1115; --card: #171a21; --ink: #e7e9ee; --mut: #9aa3b2; --line: #252a34;
+    --acc: #22c55e; --amber: #d8a13a; --block: rgba(231,233,238,0.18);
+    --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace;
+    --sans: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg: #f7f6f2; --card: #ffffff; --ink: #14161a; --mut: #5c6470; --line: #e2ddd2;
+            --acc: #15803d; --amber: #8a6a1f; --block: rgba(20,22,26,0.16); }
+  }
+  :root[data-theme="dark"] { --bg: #0f1115; --card: #171a21; --ink: #e7e9ee; --mut: #9aa3b2;
+    --line: #252a34; --acc: #22c55e; --amber: #d8a13a; --block: rgba(231,233,238,0.18); }
+  :root[data-theme="light"] { --bg: #f7f6f2; --card: #fff; --ink: #14161a; --mut: #5c6470;
+    --line: #e2ddd2; --acc: #15803d; --amber: #8a6a1f; --block: rgba(20,22,26,0.16); }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans);
+         font-size: 16.5px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 0 26px; }
+  a { color: var(--acc); text-underline-offset: 3px; }
+  code { font-family: var(--mono); font-size: .86em; background: var(--card);
+          border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; }
+
+  .bar { position: sticky; top: 0; z-index: 30; border-bottom: 1px solid var(--line);
+         background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(10px); }
+  .bar .wrap { display: flex; align-items: center; gap: 12px; height: 56px; }
+  .mark { width: 24px; height: 24px; }
+  .brand { font-family: var(--mono); font-size: 14.5px; letter-spacing: -.01em; }
+  .bar nav { margin-left: auto; display: flex; gap: 18px; font-size: 13.5px; }
+  .bar nav a { color: var(--mut); text-decoration: none; }
+  .bar nav a:hover { color: var(--ink); }
+  @media (max-width: 760px) { .bar nav { display: none; } }
+  .toggle { margin-left: auto; display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+    background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px 5px 9px;
+    color: var(--mut); font: inherit; font-size: 12px; line-height: 1; }
+  .toggle:hover { color: var(--ink); border-color: var(--acc); }
+  .toggle svg { width: 13px; height: 13px; }
+  .bar nav + .toggle { margin-left: 0; }
+
+  .hero { padding: 66px 0 0; }
+  .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+              color: var(--acc); }
+  h1 { font-size: clamp(34px, 6vw, 60px); line-height: 1.02; letter-spacing: -.035em; margin: 16px 0 0;
+        font-weight: 700; max-width: 17ch; }
+  .lead { font-size: 17.5px; color: var(--mut); max-width: 52ch; margin: 18px 0 0; }
+  .lead b { color: var(--ink); font-weight: 600; }
+  .cta { display: flex; flex-wrap: wrap; gap: 10px; margin: 24px 0 0; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 19px; border-radius: 7px;
+          font-family: var(--mono); font-size: 13.5px; text-decoration: none;
+          background: var(--acc); color: #04120a; border: 1px solid var(--acc); }
+  :root[data-theme="dark"] .btn { color: #04120a; }
+  .btn:hover { filter: brightness(1.08); }
+  .btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+  .btn.ghost:hover { border-color: var(--acc); color: var(--acc); filter: none; }
+
+  /* ---- the shrink: input blocks above, output blocks below ---- */
+  .shrink { margin: 46px 0 0; border: 1px solid var(--line); border-radius: 10px; background: var(--card);
+             padding: 22px; }
+  .row { display: flex; flex-wrap: wrap; gap: 3px; }
+  .row i { width: 9px; height: 16px; border-radius: 1px; background: var(--block); display: block; }
+  .row i.on { background: var(--acc); }
+  .lab { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10.5px;
+          letter-spacing: .12em; text-transform: uppercase; color: var(--mut); margin-bottom: 8px; }
+  .lab b { color: var(--acc); font-weight: 500; }
+  .arrow { text-align: center; color: var(--mut); font-family: var(--mono); font-size: 12px; margin: 14px 0; }
+  .facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line);
+            border: 1px solid var(--line); border-radius: 9px; overflow: hidden; margin: 40px 0 0; }
+  .facts div { background: var(--card); padding: 16px 18px; }
+  .facts b { display: block; font-family: var(--mono); font-size: 19px; color: var(--acc); }
+  .facts span { font-size: 12px; color: var(--mut); }
+  @media (max-width: 700px) { .facts { grid-template-columns: repeat(2, 1fr); } }
+
+  section { padding: 56px 0 0; }
+  h2 { font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+       color: var(--mut); margin: 0 0 18px; font-weight: 400; display: flex; align-items: center; gap: 12px; }
+  h2::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 11px; }
+  .cards > div { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 18px; }
+  .cards h3 { font-family: var(--mono); font-size: 14px; margin: 0 0 6px; }
+  .cards p { margin: 0; font-size: 14px; color: var(--mut); }
+
+  pre { margin: 0; background: var(--card); border: 1px solid var(--line); border-left: 2px solid var(--acc);
+        border-radius: 0 8px 8px 0; padding: 16px 18px; overflow-x: auto;
+        font-family: var(--mono); font-size: 12.5px; line-height: 1.85; }
+  pre .c { color: var(--mut); }
+  pre .k { color: var(--amber); }
+
+  .pairs { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pairs span { font-family: var(--mono); font-size: 12px; border: 1px solid var(--line);
+                 border-radius: 5px; padding: 6px 10px; background: var(--card); }
+
+  .support { border-top: 1px solid var(--line); margin-top: 58px; padding: 32px 0 0; }
+  .support-in { display: grid; grid-template-columns: 84px 1fr; gap: 18px; }
+  .support-in img.portrait { width: 84px; height: 84px; border-radius: 6px; border: 1px solid var(--line); }
+  .support p { margin: 0 0 12px; color: var(--mut); font-size: 14px; max-width: 62ch; }
+  .handles { display: flex; flex-wrap: wrap; gap: 6px; }
+  .handles a, .handles span { font-family: var(--mono); font-size: 11px; text-decoration: none;
+    border: 1px solid var(--line); border-radius: 5px; padding: 5px 9px; color: var(--ink); background: var(--card); }
+  .handles a:hover { border-color: var(--acc); color: var(--acc); }
+  .qr { width: 84px; height: 84px; border: 1px solid var(--line); background: #fff; border-radius: 5px; margin-top: 10px; }
+  @media (max-width: 620px) { .support-in { grid-template-columns: 1fr; } }
+
+  footer { border-top: 1px solid var(--line); margin-top: 40px; padding: 18px 0 50px;
+           font-family: var(--mono); font-size: 11.5px; color: var(--mut); }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+  footer a { color: var(--mut); } footer a:hover { color: var(--acc); }
+  .stamp { margin-left: auto; }
 </style>
 </head>
 <body>
-<header>
-  <h1>compress-kit</h1>
-  <p class="mut">The shared compression core: gzip, deflate and deflate-raw via the platform's Compression Streams. One file, no dependencies. MIT.</p>
-<figure style="margin:26px 0 0;text-align:center">
-  <img src="assets/concept.svg" alt="A diagram of what this kit does"
-       style="width:100%;max-width:320px;height:auto">
-</figure>
 
-  <p><a class="btn" href="./demo/">Run the self-test</a> <a class="btn" href="https://github.com/drsamonline/compress-kit">Source</a></p>
-</header>
-<main>
-  <div class="grid">
-    <div class="card"><h3>gzip / deflate</h3><p>Standard formats, produced and read by the platform.</p></div>
-    <div class="card"><h3>deflate-raw</h3><p>Smallest payload when you control both ends.</p></div>
-    <div class="card"><h3>String ⇄ base64</h3><p>One call to compress or expand text.</p></div>
-    <div class="card"><h3>No library</h3><p>Compression Streams are built in — this is just the wrapper.</p></div>
+<div class="bar">
+  <div class="wrap">
+    <svg class="mark" viewBox="0 0 24 24" aria-hidden="true">
+      <!-- the mark: a long bar and a short one, which is the whole idea -->
+      <rect x="1.5" y="6" width="21" height="3.4" rx="1.4" fill="var(--mut)" opacity=".45"/>
+      <rect x="1.5" y="14.6" width="8.5" height="3.4" rx="1.4" fill="var(--acc)"/>
+    </svg>
+    <span class="brand">compress-kit</span>
+    <nav>
+      <a href="#gives">What it gives you</a>
+      <a href="#api">The API</a>
+      <a href="#pairs">Pairs with</a>
+    </nav>
+    <button class="toggle" id="theme" type="button" aria-label="Switch colour theme">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+        <circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.3 5.3l1.7 1.7M17 17l1.7 1.7M18.7 5.3 17 7M7 17l-1.7 1.7"/>
+      </svg>
+      <span id="theme-label">Light</span>
+    </button>
   </div>
-  <p class="mut">Pairs with <code>lexora</code> on the command line, and with <code>crypto-kit</code> (compress, then seal).</p>
-</main>
-<footer class="mut">Built with compress-kit · © 2026 Dr Sohil Momin · Part of the Forge system<!-- support:block:start -->
-<style>
-  /* Scoped to .support. Uses the host page's variables when they exist. */
-  .support{--s-ink:var(--ink,#14110e);--s-paper:var(--paper,#f7f2e9);--s-card:var(--paper-2,#fffdf8);
-           --s-muted:var(--muted,#6b6157);--s-line:var(--line,#e2d8c8);--s-accent:var(--accent,#2f6f8f);
-           font-family:var(--sans,ui-sans-serif,-apple-system,"Segoe UI",sans-serif);
-           color:var(--s-ink);padding:2.6rem 0 1rem;border-top:1px solid var(--s-line)}
-  .support-head{display:flex;gap:1rem;align-items:flex-start;margin:0 0 1.4rem}
-  .support-portrait{width:72px;height:72px;flex:0 0 72px;border-radius:50%;object-fit:cover;
-                    border:1px solid var(--s-line);background:var(--s-card)}
-  .support h2{font-size:1.15rem;letter-spacing:.08em;text-transform:uppercase;margin:0 0 .5rem;color:var(--s-muted)}
-  .support .support-lede{margin:0;max-width:44rem;color:var(--s-muted);font-size:.95rem}
-  .support-grid{display:grid;gap:.9rem;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));align-items:stretch}
-  .support-card{background:var(--s-card);border:1px solid var(--s-line);border-radius:.7rem;padding:.9rem 1rem;
-                display:flex;flex-direction:column;gap:.35rem}
-  .support-card h3{margin:0;font-size:.78rem;letter-spacing:.09em;text-transform:uppercase;color:var(--s-muted);font-weight:600}
-  .support-card p{margin:0;font-size:.92rem;line-height:1.5}
-  .support-card a{color:var(--s-accent);text-decoration:none;border-bottom:1px solid transparent;word-break:break-word}
-  .support-card a:hover,.support-card a:focus-visible{border-bottom-color:currentColor}
-  .support-id{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
-  .support-id code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.95rem;
-                   background:transparent;border:1px dashed var(--s-line);border-radius:.35rem;padding:.15rem .45rem}
-  .support-copy{font:inherit;font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;
-                background:transparent;color:var(--s-muted);border:1px solid var(--s-line);
-                border-radius:.35rem;padding:.2rem .5rem;cursor:pointer}
-  .support-copy:hover,.support-copy:focus-visible{color:var(--s-ink);border-color:var(--s-ink)}
-  .support-card.upi{grid-row:span 1}
-  .support-qr{display:flex;gap:.9rem;align-items:center;flex-wrap:wrap;margin-top:.2rem}
-  /* the white tile is load-bearing: a dark-mode QR does not scan */
-  .support-qr img{width:132px;height:132px;display:block;background:#fff;padding:.35rem;
-                  border:1px solid var(--s-line);border-radius:.4rem;image-rendering:pixelated}
-  .support-qr small{display:block;color:var(--s-muted);font-size:.8rem;max-width:11rem;line-height:1.4}
-  .support-foot{margin:1.2rem 0 0;font-size:.8rem;color:var(--s-muted)}
-  @media (prefers-reduced-motion:no-preference){.support-card{transition:border-color .15s ease}}
-  .support-card:target,.support-card:focus-within{border-color:var(--s-accent)}
-</style>
+</div>
 
-<section class="support" id="support" aria-labelledby="support-h" data-support>
-  <div class="support-head">
-    <img class="support-portrait" src="assets/support-portrait.jpg" width="72" height="72"
-         alt="Dr. Sohil Momin" loading="lazy" decoding="async">
-    <div>
-      <h2 id="support-h">Support this work</h2>
-      <p class="support-lede">Everything here is free, offline and accountless. If it earned its keep,
-        there are a few ways to say so — pick whichever is easiest where you are.</p>
+<div class="wrap">
+  <header class="hero">
+    <p class="eyebrow">one file · no dependencies · MIT</p>
+    <h1>The same bytes, smaller.</h1>
+    <p class="lead">gzip, deflate and deflate-raw through <b>the platform's own Compression
+    Streams</b> — no library, no build step, nothing to install. This is the wrapper that makes
+    them one call.</p>
+    <div class="cta">
+      <a class="btn" href="https://github.com/drsamonline/compress-kit/blob/main/compress-kit.js">Get the file — 4 KB</a>
+      <a class="btn ghost" href="https://github.com/drsamonline/compress-kit">Read the source</a>
     </div>
-  </div>
-  <div class="support-grid">
 
-    <div class="support-card upi">
-      <h3>UPI · India</h3>
-      <div class="support-id">
-        <code id="upi-vpa">drsohilboi@ybl</code>
-        <button class="support-copy" type="button" data-copy="drsohilboi@ybl"
-                aria-label="Copy the UPI ID drsohilboi@ybl">Copy</button>
+    <div class="shrink">
+      <div class="lab"><span>input</span><b>48 blocks</b></div>
+      <div class="row"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="arrow">↓ gzip · deflate · deflate-raw</div>
+      <div class="lab"><span>output</span><b>17 blocks</b></div>
+      <div class="row"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
+    </div>
+
+    <div class="facts">
+      <div><b>3</b><span>formats: gzip, deflate, raw</span></div>
+      <div><b>0</b><span>dependencies</span></div>
+      <div><b>1</b><span>file, 4 KB</span></div>
+      <div><b>MIT</b><span>licence</span></div>
+    </div>
+  </header>
+
+  <section id="gives">
+    <h2>What it gives you</h2>
+    <div class="cards">
+      <div>
+        <h3>gzip / deflate</h3>
+        <p>Standard formats, produced and read by the platform — so anything else can open them.</p>
       </div>
-      <p><a href="upi://pay?pa=drsohilboi%40ybl&amp;pn=Dr.%20Sohil%20Momin&amp;cu=INR">Open in a UPI app →</a></p>
-      <div class="support-qr">
-        <img src="assets/upi-qr.svg" width="132" height="132"
-             alt="QR code for the UPI ID drsohilboi@ybl, payee Dr. Sohil Momin">
-        <small>Scan with any UPI app. Payee: Dr. Sohil Momin.</small>
+      <div>
+        <h3>deflate-raw</h3>
+        <p>Smallest payload when you control both ends and don't need a container around it.</p>
+      </div>
+      <div>
+        <h3>String ⇄ base64</h3>
+        <p>One call to compress or expand text, returning base64 you can paste anywhere.</p>
+      </div>
+      <div>
+        <h3>No library</h3>
+        <p>Compression Streams are built in. This is the wrapper, not a reimplementation.</p>
       </div>
     </div>
+  </section>
 
-    <div class="support-card">
-      <h3>Ko-fi</h3>
-      <p>One-off tip, no account needed.<br>
-        <a href="https://ko-fi.com/matneo" target="_blank" rel="noopener noreferrer">ko-fi.com/matneo →</a></p>
+  <section id="api">
+    <h2>The API</h2>
+    <pre><span class="c">// bytes in, bytes out</span>
+<span class="k">const</span> packed   = <span class="k">await</span> C.gzip(bytes);
+<span class="k">const</span> restored = <span class="k">await</span> C.gunzip(packed);
+
+<span class="c">// the raw pair, when both ends are yours</span>
+<span class="k">await</span> C.deflateRaw(bytes);   <span class="c">// and C.inflateRaw back</span>
+
+<span class="c">// the self-test is a Node script, not a button on this page:</span>
+<span class="c">//   node test-node.js   — every format, round-tripped</span>
+
+<span class="c">// text in, base64 out</span>
+<span class="k">const</span> b64 = <span class="k">await</span> C.compressString(text, <span class="s">'gzip'</span>);
+<span class="k">await</span> C.decompressString(b64, <span class="s">'gzip'</span>);</pre>
+  </section>
+
+  <section id="pairs">
+    <h2>Pairs with</h2>
+    <div class="pairs">
+      <span>lexora — on the command line</span>
+      <span>crypto-kit — compress, then seal</span>
     </div>
+  </section>
 
-    <div class="support-card">
-      <h3>PayPal</h3>
-      <p>For outside India, or a card instead of UPI.<br>
-        <a href="https://paypal.me/drsohilmomin?locale.x=en_GB&amp;country.x=IN"
-           target="_blank" rel="noopener noreferrer">paypal.me/drsohilmomin →</a></p>
+  <section class="support" id="support">
+    <h2>Support the work</h2>
+    <div class="support-in">
+      <div>
+        <img class="portrait" src="assets/support-portrait.jpg" alt="Dr Sohil Momin">
+        <img class="qr" src="assets/upi-qr.svg" alt="UPI payment QR — open amount">
+      </div>
+      <div>
+        <h3 style="margin:0 0 6px;font-size:15px;font-family:var(--mono)">Free to use, and it stays free</h3>
+        <p>Everything here is free, offline and accountless. If it earned its keep, there are a few
+        ways to say so — pick whichever is easiest where you are.</p>
+        <div class="handles">
+          <span>UPI · drsohilboi@ybl</span>
+          <a href="https://ko-fi.com/matneo" rel="noopener noreferrer">Ko-fi</a>
+          <a href="https://paypal.me/drsohilmomin?locale.x=en_GB&amp;country.x=IN" rel="noopener noreferrer">PayPal</a>
+          <a href="https://www.amazon.com/stores/author/B08ZT331LY/allbooks?ccs_id=aed72b9f-71d9-41dc-adee-e9368a317acc" rel="noopener noreferrer">Books</a>
+          <a href="https://drsamonline.github.io/" rel="noopener noreferrer">All projects</a>
+          <a href="mailto:sohilmomin2000@gmail.com">Email</a>
+        </div>
+      </div>
     </div>
+  </section>
 
-    <div class="support-card">
-      <h3>My books</h3>
-      <p>The Amazon author store — every title, one shelf.<br>
-        <a href="https://www.amazon.com/stores/author/B08ZT331LY/allbooks?ccs_id=aed72b9f-71d9-41dc-adee-e9368a317acc"
-           target="_blank" rel="noopener noreferrer">Amazon bookstore →</a></p>
+  <footer>
+    <div class="wrap">
+      <span>compress-kit · © 2026 Dr Sohil Momin · part of the Forge system</span>
+      <a href="https://github.com/drsamonline/compress-kit">GitHub</a>
+      <span class="stamp">design 2026-11-05</span>
     </div>
-
-    <div class="support-card">
-      <h3>More apps</h3>
-      <p>The rest of the estate, all of it offline-first.<br>
-        <a href="https://drsamonline.github.io/" target="_blank" rel="noopener noreferrer">drsamonline.github.io →</a></p>
-    </div>
-
-    <div class="support-card">
-      <h3>Say hello</h3>
-      <p>Bugs, corrections, requests.<br>
-        <a href="mailto:sohilmomin2000@gmail.com">sohilmomin2000@gmail.com →</a></p>
-    </div>
-
-  </div>
-  <p class="support-foot">No accounts, no tracking, nothing on this page loads from the network.
-    A thank-you is a thank-you; nothing is gated behind it.</p>
-</section>
+  </footer>
+</div>
 
 <script>
-  /* Copy buttons degrade to "select the text yourself" — never a dead button. */
-  (function () {
-    document.querySelectorAll('.support [data-copy]').forEach(function (btn) {
-      if (btn.dataset.copyWired) return;
-      btn.dataset.copyWired = '1';
-      btn.addEventListener('click', function () {
-        var value = btn.getAttribute('data-copy');
-        var label = btn.textContent;
-        function done() {
-          btn.textContent = 'Copied';
-          setTimeout(function () { btn.textContent = label; }, 1500);
-        }
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(value).then(done, function () {});
-          return;
-        }
-        var t = document.createElement('textarea');
-        t.value = value; t.setAttribute('readonly', ''); t.style.position = 'absolute';
-        t.style.left = '-9999px'; document.body.appendChild(t); t.select();
-        try { document.execCommand('copy'); done(); } catch (e) {}
-        t.remove();
-      });
-    });
-  })();
-</script>
-<!-- support:block:end -->
-</footer>
-
-<script>
-/* TAKE YOUR DATA WITH YOU.
-   Every app here stores everything on your device, and most had no way to get it out - which
-   makes "your data stays yours" a claim you cannot act on. This exports the RAW STORE as JSON:
-   it is a BACKUP, not a report. A formatted CSV needs the app's own model, and this is the
-   honest thing that can be the same in every app.
-   Press the button, or open the page with ?export. */
-window.__exportAll = function () {
-  var out = { app: document.title, exported: new Date().toISOString(), storage: {} };
-  try {
-    for (var i = 0; i < localStorage.length; i++) {
-      var k = localStorage.key(i);
-      if (k && k.indexOf("__") !== 0) out.storage[k] = localStorage.getItem(k);
-    }
-  } catch (e) { out.storageError = String(e); }
-  var name = (document.title || "app").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
-             + "-data-" + new Date().toISOString().slice(0, 10) + ".json";
-  var json = JSON.stringify(out, null, 2);
-  if (window.Export && typeof Export.save === "function") {
-    Export.save(name, json, "application/json");
-  } else {
-    var a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([json], { type: "application/json" }));
-    a.download = name;
-    document.body.appendChild(a); a.click();
-    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-  }
-  return name;
-};
-(function () {
-  if (location.search.indexOf("export") >= 0) { setTimeout(window.__exportAll, 300); return; }
-  function add() {
-    if (!document.body || document.getElementById("__exportLink")) return;
-    /* The floating button was removed: it sat over the content and covered
-       what you were reading. The function below is untouched — Ctrl+Z still
-       undoes, and ?export still exports. */
-    return;
-  }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", add);
-  else add();
-})();
-</script>
-
-<script>
-/* PUT IT BACK.
-   The export writes the raw store as JSON; without this, that file could never be restored -
-   and a backup you cannot restore is not a backup. This reads the file back, shows you what
-   is in it BEFORE it writes anything, and asks before replacing.
-   Press the button, or open the page with ?import. */
-window.__importAll = function () {
-  var inp = document.createElement("input");
-  inp.type = "file"; inp.accept = ".json,application/json";
-  inp.onchange = function () {
-    var f = inp.files && inp.files[0];
-    if (!f) return;
-    var r = new FileReader();
-    r.onload = function () {
-      var data;
-      try { data = JSON.parse(String(r.result)); }
-      catch (e) { alert("That is not a JSON backup."); return; }
-      var store = data && (data.storage || data.localStorage || data);
-      if (!store || typeof store !== "object") { alert("No stored data found in that file."); return; }
-      var keys = Object.keys(store);
-      if (!keys.length) { alert("That backup is empty."); return; }
-      var preview = keys.slice(0, 8).map(function (k) { return "  " + k; }).join("\n");
-      var ok = confirm("This backup contains " + keys.length + " item(s):\n\n" + preview
-        + (keys.length > 8 ? "\n  ..." : "")
-        + "\n\nRESTORE THEM? This replaces what this app has stored now.");
-      if (!ok) return;
-      var n = 0;
-      keys.forEach(function (k) {
-        var v = store[k];
-        localStorage.setItem(k, typeof v === "string" ? v : JSON.stringify(v));
-        n++;
-      });
-      alert("Restored " + n + " item(s). Reloading.");
-      location.reload();
-    };
-    r.readAsText(f);
+(() => {
+  const root = document.documentElement, btn = document.getElementById('theme');
+  const label = document.getElementById('theme-label'), KEY = 'compress-kit-theme';
+  const paint = (mode) => {
+    const dark = mode === 'dark' || (mode === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+    root.setAttribute('data-theme', dark ? 'dark' : 'light');
+    label.textContent = dark ? 'Dark' : 'Light';
   };
-  inp.click();
-};
-(function () {
-  if (location.search.indexOf("import") >= 0) { setTimeout(window.__importAll, 300); return; }
-  function add() {
-    if (!document.body || document.getElementById("__importLink")) return;
-    /* The floating button was removed: it sat over the content and covered
-       what you were reading. The function below is untouched — Ctrl+Z still
-       undoes, and ?export still exports. */
-    return;
-  }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", add);
-  else add();
-})();
-</script>
-
-<script>
-/* UNDO — at the level every app already shares: the STORE ITSELF.
-   Apps save with localStorage.setItem. This wraps that ONE function, remembers the previous
-   value of whatever it touches, and puts it back on Ctrl+Z or the button.
-   WHY HERE: a per-app undo needs the app to funnel its writes through one function, and where
-   it does not, the undo would quietly do nothing - which is the failure this estate keeps
-   producing. Hooking the store cannot silently do nothing: if the app saves, this sees it. */
-(function () {
-  var history = [], orig = localStorage.setItem.bind(localStorage), LIMIT = 60;
-  localStorage.setItem = function (k, v) {
-    try {
-      var prev = localStorage.getItem(k);
-      if (prev !== String(v) && String(k).indexOf("__") !== 0) {
-        history.push({ k: k, prev: prev });
-        if (history.length > LIMIT) history.shift();
-      }
-    } catch (e) {}
-    return orig(k, v);
-  };
-  function say(m) {
-    var d = document.createElement("div");
-    d.textContent = m;
-    d.style.cssText = "position:fixed;left:50%;transform:translateX(-50%);bottom:52px;background:#111;color:#eee;border:1px solid #444;border-radius:8px;padding:8px 14px;font:13px system-ui;z-index:10000";
-    document.body.appendChild(d);
-    setTimeout(function () { d.remove(); }, 1800);
-  }
-  window.__undo = function () {
-    var h = history.pop();
-    if (!h) { say("Nothing to undo"); return false; }
-    try {
-      if (h.prev === null) localStorage.removeItem(h.k);
-      else orig(h.k, h.prev);
-    } catch (e) { say("Could not undo"); return false; }
-    say("Undone. Reloading.");
-    setTimeout(function () { location.reload(); }, 350);
-    return true;
-  };
-  document.addEventListener("keydown", function (e) {
-    if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === "z") {
-      var t = e.target || {};
-      if (t.tagName === "INPUT" || t.tagName === "TEXTAREA") return;   // let the field undo its own text
-      e.preventDefault(); window.__undo();
-    }
+  const stored = localStorage.getItem(KEY);
+  paint(stored || 'system');
+  if (!stored) root.removeAttribute('data-theme');
+  btn.addEventListener('click', () => {
+    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    localStorage.setItem(KEY, next); paint(next);
   });
-  function add() {
-    if (!document.body || document.getElementById("__undoBtn")) return;
-    /* The floating button was removed: it sat over the content and covered
-       what you were reading. The function below is untouched — Ctrl+Z still
-       undoes, and ?export still exports. */
-    return;
-  }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", add);
-  else add();
-})();
-</script>
-
-<style>
-/* A FOCUS RING, because a keyboard you cannot see is not access. Most of these apps
-   removed the default outline and never replaced it. */
-:focus-visible{outline:2px solid currentColor;outline-offset:2px}
-
-  /* ---------- light theme ----------
-     Added so the page reads on paper. It overrides the page's own variables and
-     nothing else — no markup, no layout, no type. */
-  :root, html {
-    color-scheme: light;
-    --bg: #f7f6f2;
-    --card: #ffffff;
-    --ink: #14161a;
-    --mut: #5c6470;
-    --line: #e2ddd2;
-    --acc: #178840;
-  }
-</style>
-<script>
-/* KEYBOARD ACCESS — hooked at document, like the undo is hooked at the store.
-   /  focus search      ?  shortcuts      Esc  leave a field
-   It NEVER steals a key while a field has focus: a shortcut that eats your typing is a
-   bug that looks like a feature. */
-(function () {
-  function typing(e) {
-    var t = e.target || {};
-    return /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable === true;
-  }
-  function searchField() {
-    return document.querySelector(
-      'input[type="search"], input[placeholder*="search" i], input[id*="search" i],' +
-      ' input[name*="search" i], input[placeholder*="filter" i], input[type="text"]');
-  }
-  function say(m) {
-    var d = document.createElement("div");
-    d.textContent = m;
-    d.style.cssText = "position:fixed;left:50%;transform:translateX(-50%);bottom:86px;background:#111;color:#eee;border:1px solid #444;border-radius:8px;padding:8px 14px;font:13px system-ui;z-index:10000";
-    document.body.appendChild(d);
-    setTimeout(function () { d.remove(); }, 1600);
-  }
-  function overlay() {
-    var old = document.getElementById("__keysHelp");
-    if (old) { old.remove(); return; }
-    var box = document.createElement("div");
-    box.id = "__keysHelp";
-    box.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:10001;display:flex;align-items:center;justify-content:center;font:14px system-ui;color:#eee";
-    box.innerHTML = '<div style="background:#15181f;border:1px solid #333;border-radius:12px;padding:20px 24px;max-width:340px">'
-      + '<div style="font-weight:700;margin-bottom:10px">Keyboard</div>'
-      + '<div style="display:grid;grid-template-columns:auto 1fr;gap:6px 14px">'
-      + '<kbd style="background:#222;border-radius:4px;padding:1px 6px">/</kbd><span>focus search</span>'
-      + '<kbd style="background:#222;border-radius:4px;padding:1px 6px">?</kbd><span>this list</span>'
-      + '<kbd style="background:#222;border-radius:4px;padding:1px 6px">Esc</kbd><span>leave a field</span>'
-      + '<kbd style="background:#222;border-radius:4px;padding:1px 6px">Ctrl Z</kbd><span>undo the last change</span>'
-      + '</div><div style="margin-top:12px;opacity:.6;font-size:12px">press ? or click to close</div></div>';
-    box.onclick = function () { box.remove(); };
-    document.body.appendChild(box);
-  }
-  document.addEventListener("keydown", function (e) {
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
-    if (e.key === "Escape") { if (typing(e)) { e.target.blur(); } var b = document.getElementById("__keysHelp"); if (b) b.remove(); return; }
-    if (typing(e)) return;                       // never steal a key from a field
-    if (e.key === "/") {
-      var s = searchField();
-      if (s) { e.preventDefault(); s.focus(); if (s.select) s.select(); say("Search — Esc to leave"); }
-      return;
-    }
-    if (e.key === "?") { e.preventDefault(); overlay(); }
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if (!localStorage.getItem(KEY)) paint('system');
   });
-  window.__keyboardHelp = overlay;
 })();
-</script>
-
-<script>
-/* A SMOKE TEST, not a feature test: did the page come up, are the kits loaded, does storage work.
-   Open with ?test to see it. */
-window.__smokeTest = function () {
-  var out = [];
-  function ok(n, c) { out.push((c ? "PASS " : "FAIL ") + n); }
-  ok("the document rendered", !!document.body && document.body.children.length > 0);
-  ok("a heading is present", !!document.querySelector("h1, h2"));
-  ok("no script threw during load", !window.__bootError);
-  var kits = ["Export","Loom","CryptoKit","Case","Search","Srs","Game","Art","Audio","Ml","UI","Lan","Astro"];
-  var found = kits.filter(function (k) { return window[k]; });
-  ok("at least one kit is loaded (" + (found.join(", ") || "none") + ")", found.length > 0);
-  try { localStorage.setItem("__smoke","1"); ok("storage works", localStorage.getItem("__smoke") === "1"); localStorage.removeItem("__smoke"); }
-  catch (e) { ok("storage works", false); }
-  console.log(out.join("\n"));
-  if (location.search.indexOf("test") >= 0) {
-    var d = document.createElement("pre"); d.textContent = out.join("\n");
-    d.style.cssText = "position:fixed;left:0;right:0;bottom:0;background:#111;color:#eee;padding:12px;font:12px ui-monospace,monospace;z-index:99999;max-height:40vh;overflow:auto;white-space:pre-wrap";
-    document.body.appendChild(d);
-  }
-  return out;
-};
-window.addEventListener("error", function () { window.__bootError = true; });
 </script>
 </body>
 </html>
