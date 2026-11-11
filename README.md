@@ -1,78 +1,33 @@
-# compress-kit
+# compress-kit — merged into export-kit
 
-[![live](https://img.shields.io/badge/live-online-22c55e)](https://drsamonline.github.io/compress-kit/)
-[![test](https://github.com/drsamonline/compress-kit/actions/workflows/test.yml/badge.svg)](https://github.com/drsamonline/compress-kit/actions/workflows/test.yml)
-[![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue)](LICENSE)
+**This kit is no longer maintained on its own.** On 2026-11-12 it was folded into
+**[export-kit](https://github.com/drsamonline/export-kit)** as version 2.0.0.
 
-**The shared compression core for drsamonline apps.** One file, no dependencies,
-built on the platform's **Compression Streams**.
+## Why
 
-The browser counterpart to `lexora` (which compresses on the CLI/server). Apps
-never bundle a compression library:
+`export-kit` wrote a **store-only** ZIP — an archive with no compression in it — because the
+compressor lived here, in a repository nothing there depended on. Two kits that are only
+useful together are one kit.
+
+## What to use instead
 
 ```js
-const gz  = await Compress.gzip(bytes);      // -> Uint8Array
-const raw = await Compress.gunzip(gz);       // -> Uint8Array
+const E = require("export-kit.js");
 
-const b64 = await Compress.compressString("lots of text…");
-const txt = await Compress.decompressString(b64);
+const gz  = await E.gzip(bytes);          // also gunzip, deflate, inflate, deflateRaw
+const zip = await E.zipCompressed(files); // method 8, falls back to store
 ```
 
-## API
-
-| Call | Does |
+| Old | New |
 |---|---|
-| `Compress.gzip` / `gunzip` | gzip (with header). |
-| `Compress.deflate` / `inflate` | zlib deflate. |
-| `Compress.deflateRaw` / `inflateRaw` | raw deflate (no header) — smallest. |
-| `Compress.compressString` / `decompressString` | Text ⇄ base64, any format. |
-| `Compress.ratio(original, compressed)` | Compressed/original, for a UI. |
-| `Compress.human(n)` | "12.4 KB" style formatting. |
-| `Compress.bytes` | text/base64 helpers. |
+| `Compress.gzip/gunzip` | `Export.gzip/gunzip` |
+| `Compress.deflate/inflate` | `Export.deflate/inflate` |
+| `Compress.deflateRaw/inflateRaw` | `Export.deflateRaw/inflateRaw` |
+| `Compress.compressString/decompressString` | `Export.compressString/decompressString` |
+| `Compress.available()` | `Export.compressionAvailable()` |
+| `Compress.ratio` | `Export.compressionRatio` |
+| `Compress.human` | `Export.human` |
+| `Compress.bytes.toBase64/fromBase64` | `Export.toBase64/fromBase64` |
 
-## Why not a library
-
-Compression Streams are built into modern browsers and Node 18+, so a
-compression library is dead weight. This wrapper is the one place the plumbing
-lives — and it reads the stream directly, so it needs no `Response`/`Blob` and
-runs everywhere the streams exist.
-
-## Verified
-
-```
-node test-node.js
-PASS  gzip round-trip
-PASS  deflate round-trip
-PASS  deflate-raw round-trip
-PASS  repetitive data compresses well
-PASS  string round-trip
-PASS  unicode survives
-6 passed, 0 failed
-```
-
-## Environment
-
-Needs **Compression Streams** — Chrome 80+, Firefox 113+, Safari 16.4+, Node 18+.
-`Compress.available()` reports it.
-
-## Support
-
-<img src="docs/assets/support-portrait.jpg" width="72" height="72" alt="Dr. Sohil Momin" align="left" style="border-radius:50%;margin-right:1rem">
-
-Free, offline, accountless — and staying that way. If it earned its keep:
-
-| | |
-|---|---|
-| UPI (India) | `drsohilboi@ybl` — payee Dr. Sohil Momin, open amount, or scan [the QR](docs/assets/upi-qr.svg) |
-| GitHub Sponsors | [github.com/sponsors/drsamonline](https://github.com/sponsors/drsamonline) |
-| Ko-fi | [ko-fi.com/matneo](https://ko-fi.com/matneo) |
-| PayPal | [paypal.me/drsohilmomin](https://paypal.me/drsohilmomin?locale.x=en_GB&country.x=IN) |
-| My books | [Amazon author store](https://www.amazon.com/stores/author/B08ZT331LY/allbooks?ccs_id=aed72b9f-71d9-41dc-adee-e9368a317acc) |
-| More apps | [drsamonline.github.io](https://drsamonline.github.io/) |
-| Email | [sohilmomin2000@gmail.com](mailto:sohilmomin2000@gmail.com) |
-
-Nothing is gated behind it: no accounts, no tracking, no network requests.
-
-## Licence
-
-PolyForm Noncommercial 1.0.0. (c) 2026 Dr Sohil Momin. Part of the Forge system — kits open, orchestrator licensed.
+This repository stays readable so that anything vendoring it still resolves; the code here is
+frozen at the last version before the merge.
